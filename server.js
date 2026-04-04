@@ -1,18 +1,26 @@
 const express = require('express');
 const jobs = require('./database/database');
 const { v4: uuidv4 } = require('uuid');
-const jobWorker = require('./workers/job_processor');
+// const jobWorker = require('./workers/job_processor');
+const jobQueue = require('./queues/jobQueue');
 
 const PORT = 3000;
 
 const app = express();
 
 // creates a job
-app.post('/jobs', (req, res) => {
+app.post('/jobs', async (req, res) => {
   const id = uuidv4();
   let job = { id, status: 'queued', createdAt: Date.now() };
-  jobs.set(id, job);
-  jobWorker(id);
+
+  try {
+    await jobQueue.add('process-log', { id });
+    jobs.set(id, job);
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, error: 'Failed to process log' });
+  }
 
   res.status(201).json({ success: true, job });
 });
