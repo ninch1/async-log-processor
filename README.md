@@ -12,6 +12,8 @@ A Node.js backend that processes jobs asynchronously using BullMQ and Redis.
   - processing
   - completed
   - failed
+- Centralized error handling middleware
+- Modular project structure (controllers, middleware, utils)
 
 ## Running locally
 
@@ -21,8 +23,14 @@ A Node.js backend that processes jobs asynchronously using BullMQ and Redis.
 2. Install dependencies:
    npm install
 
-3. Start API and worker:
+3. Run the API and worker:
+
+   Option A (recommended):
    npm run dev
+
+   Option B (run separately):
+   node src/server.js
+   node src/workers/jobWorker.js
 
 ## TODO
 
