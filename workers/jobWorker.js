@@ -10,12 +10,17 @@ new Worker(
   async (job) => {
     const id = job.data.id;
 
+    // processes job
     try {
-      await updateJob(id, { status: 'processing' });
+      await updateJob(id, { status: 'processing', startedAt: Date.now() });
       await delay(5000);
-      await updateJob(id, { status: 'completed' });
+      await updateJob(id, { status: 'completed', completedAt: Date.now() });
     } catch (error) {
-      console.error(error);
+      await updateJob(id, {
+        status: 'failed',
+        failedAt: Date.now(),
+        errorMessage: error.message,
+      });
     }
   },
   {
@@ -25,3 +30,5 @@ new Worker(
     },
   },
 );
+
+console.log('Worker running.');

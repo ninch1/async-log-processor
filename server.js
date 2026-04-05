@@ -10,8 +10,17 @@ const app = express();
 // creates a job
 app.post('/jobs', async (req, res) => {
   const id = uuidv4();
-  let job = { id, status: 'queued', createdAt: Date.now() };
 
+  // job object
+  let job = {
+    id,
+    status: 'queued',
+    createdAt: Date.now(),
+    startedAt: null,
+    completedAt: null,
+  };
+
+  // adds job to redis and queue
   try {
     await saveJob(job);
     await jobQueue.add('process-log', { id });
@@ -39,7 +48,7 @@ app.get('/jobs/:id', async (req, res) => {
   if (job) res.json({ success: true, job });
   else
     res
-      .status(400)
+      .status(404)
       .json({ success: false, error: `Job with id: ${id} does not exist.` });
 });
 
