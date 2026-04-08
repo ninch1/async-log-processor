@@ -28,6 +28,7 @@ router.post('/', async (req, res, next) => {
   let job = {
     id,
     status: 'queued',
+    result: {},
     createdAt: Date.now(),
     startedAt: null,
     completedAt: null,
@@ -73,6 +74,7 @@ router.post('/', async (req, res, next) => {
         }
       }
 
+      // sends final response
       if (!settled) {
         settled = true;
         return res.status(201).json({ success: true, job });

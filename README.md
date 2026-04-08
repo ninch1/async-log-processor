@@ -1,19 +1,19 @@
 # Async Log Processor
 
-A Node.js backend that processes jobs asynchronously using BullMQ and Redis.
+A Node.js backend that processes log files asynchronously using BullMQ and Redis.
 
 ## Features
 
-- Create jobs via API
+- Upload log files via API
 - Background job processing with BullMQ
 - Redis-based job storage
+- Stream-based file processing in worker
 - Job lifecycle tracking:
   - queued
   - processing
   - completed
   - failed
-- Centralized error handling middleware
-- Modular project structure (controllers, middleware, utils)
+- Result generation (e.g. totalLines)
 
 ## Running locally
 
@@ -34,6 +34,7 @@ A Node.js backend that processes jobs asynchronously using BullMQ and Redis.
 
 ## TODO
 
-- Add file upload support
-- Implement stream-based log processing
-- Store job results
+- Add log filtering (ERROR, WARN, etc.)
+- Support .gz files
+- Improve result analysis (counts, summaries)
+- Add result endpoint
