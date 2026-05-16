@@ -1,0 +1,15 @@
+INFO Server started on port 3000
+INFO Connected to Redis
+INFO Job queue initialized
+WARN High memory usage detected
+INFO Received upload request
+ERROR Failed to parse one log line
+INFO File saved successfully
+WARN Slow processing time detected
+ERROR Worker failed to process job
+INFO Retry scheduled
+INFO Job completed successfully
+WARN Redis response time is high
+ERROR Database connection failed
+INFO User requested job status
+INFO Result returned to client

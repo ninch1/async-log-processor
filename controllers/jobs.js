@@ -11,7 +11,7 @@ const router = express.Router();
 
 // creates a job
 router.post('/', async (req, res, next) => {
-  let settled = false; // flag to check if response was already sent. use in callbacks (where youre not actually returning from main function)
+  let settled = false; // flag to check if response was already sent. using in callbacks (where youre not actually returning from main function)
 
   let bb;
   try {
@@ -22,7 +22,7 @@ router.post('/', async (req, res, next) => {
 
   const id = uuidv4();
 
-  let hasFile = false;
+  let hasFile = false; // used to detect missing uploads and prevent multiple files
 
   // job object
   let job = {

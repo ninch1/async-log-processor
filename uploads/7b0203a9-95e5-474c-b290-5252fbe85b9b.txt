@@ -1,0 +1,3 @@
+INFO Server started
+WARN Slow response detected
+ERROR Database connection failed
