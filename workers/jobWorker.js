@@ -7,9 +7,11 @@ const through2 = require('through2');
 // Creates a transform function that counts each line processed by the stream
 function logCounterWrapper(result) {
   return function logCounter(chunk, enc, callback) {
-    chunk = chunk.toString().split(' ')[0].toUpperCase();
-    if (['INFO', 'WARN', 'ERROR'].includes(chunk))
-      result[chunk] >= 0 ? (result[chunk] += 1) : (result[chunk] = 1); // if given type hasnt been declared yet, declare it and set to 1, else increment it
+    const level = chunk.toString().split(' ')[0].toUpperCase();
+    if (['INFO', 'WARN', 'ERROR'].includes(level))
+      result.levels[level] >= 0
+        ? (result.levels[level] += 1)
+        : (result.levels[level] = 1); // if given type hasnt been declared yet, declare it and set to 1, else increment it
     result.totalLines++;
     callback(); // tells the stream this chunk is done and it can continue
   };
@@ -29,7 +31,7 @@ new Worker(
     const filePath = job.data.filePath;
 
     // Result object will be updated while streaming through the file
-    const result = { totalLines: 0 };
+    const result = { totalLines: 0, levels: {} };
 
     try {
       // Mark the job as actively being processed
@@ -39,7 +41,7 @@ new Worker(
       });
 
       // --- only for visualization while testing ---
-      await delay(5000);
+      await delay(10000);
 
       // Wrap stream processing in a Promise so BullMQ waits until the stream finishes
       await new Promise((resolve, reject) => {
@@ -49,8 +51,13 @@ new Worker(
           .pipe(split2())
           .pipe(through2(logCounterWrapper(result)));
 
-        // Resolve when stream processing is complete
-        mainStream.on('finish', resolve);
+        // When stream processing finishes, delete the uploaded file and resolve the Promise
+        mainStream.on('finish', () => {
+          fs.unlink(filePath, (err) => {
+            if (err) console.log('File Deletion error: ' + err);
+          });
+          resolve();
+        });
 
         // Reject if reading or processing the stream fails
         readStream.on('error', reject);

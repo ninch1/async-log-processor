@@ -104,16 +104,40 @@ router.post('/', async (req, res, next) => {
 // retreives job info
 router.get('/:id', async (req, res, next) => {
   const { id } = req.params;
+
+  // Optional query filter, e.g. ?level=ERROR,WARN
+  const levelFilter = req.query.level;
+
   let job = {};
+
   try {
+    // Get job record from Redis
     job = await getJob(id);
   } catch (error) {
     return next(
       new ErrorResponse(`Faield to retreive job with id: ${id}`, 500),
     );
   }
-  if (job) res.json({ success: true, job });
-  else
+  if (job) {
+    // Only filter level results after the worker has completed processing
+    if (levelFilter && job.status === 'completed') {
+      const requestedLevels = levelFilter
+        .split(',')
+        .map((level) => level.trim().toUpperCase());
+
+      const filteredLevels = {};
+
+      // Keep only the requested log levels in the response
+      Object.entries(job.result.levels).forEach(([level, count]) => {
+        if (requestedLevels.includes(level)) {
+          filteredLevels[level] = count;
+        }
+      });
+
+      job.result.levels = filteredLevels;
+    }
+    res.json({ success: true, job });
+  } else
     return next(new ErrorResponse(`Job with id: ${id} does not exist.`, 404));
 });
 
