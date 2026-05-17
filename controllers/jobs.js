@@ -7,9 +7,32 @@ const busboy = require('busboy');
 const fs = require('fs');
 const path = require('path');
 
+// helper function for filtering levels
+function filterLevels(levels, levelFilter) {
+  if (!levelFilter || !levels) return levels;
+
+  const requestedLevels = levelFilter
+    .split(',')
+    .map((level) => level.trim().toUpperCase());
+
+  const filteredLevels = {};
+
+  // Keep only the requested log levels in the response
+  Object.entries(levels).forEach(([level, count]) => {
+    if (requestedLevels.includes(level)) {
+      filteredLevels[level] = count;
+    }
+  });
+
+  return filteredLevels;
+}
+
+// initializing express router
 const router = express.Router();
 
-// creates a job
+// POST /jobs
+// Uploads a log file, saves it to disk, creates a Redis job record,
+// and adds a BullMQ job for background processing.
 router.post('/', async (req, res, next) => {
   let settled = false; // flag to check if response was already sent. using in callbacks (where youre not actually returning from main function)
 
@@ -101,7 +124,44 @@ router.post('/', async (req, res, next) => {
   req.pipe(bb);
 });
 
-// retreives job info
+// GET /jobs/:id/result
+// Retrieves only the completed job result.
+// Supports optional level filtering with ?level=ERROR,WARN.
+router.get('/:id/result', async (req, res, next) => {
+  const { id } = req.params;
+
+  // Optional query filter, e.g. ?level=ERROR,WARN
+  const levelFilter = req.query.level;
+
+  let job = {};
+
+  try {
+    // Get job record from Redis
+    job = await getJob(id);
+  } catch (error) {
+    return next(
+      new ErrorResponse(`Failed to retrieve job with id: ${id}`, 500),
+    );
+  }
+  if (job) {
+    if (job.status !== 'completed')
+      // only send success true if job is completed
+      return next(
+        new ErrorResponse(
+          `Job with id: ${id} is not completed yet. Current status: ${job.status}`,
+          409,
+        ),
+      );
+
+    job.result.levels = filterLevels(job.result.levels, levelFilter);
+    return res.json({ success: true, job });
+  } else
+    return next(new ErrorResponse(`Job with id: ${id} does not exist.`, 404));
+});
+
+// GET /jobs/:id
+// Retrieves full job metadata, including status, timestamps, filePath,
+// and result if processing has completed.
 router.get('/:id', async (req, res, next) => {
   const { id } = req.params;
 
@@ -115,28 +175,14 @@ router.get('/:id', async (req, res, next) => {
     job = await getJob(id);
   } catch (error) {
     return next(
-      new ErrorResponse(`Faield to retreive job with id: ${id}`, 500),
+      new ErrorResponse(`Failed to retrieve job with id: ${id}`, 500),
     );
   }
   if (job) {
-    // Only filter level results after the worker has completed processing
-    if (levelFilter && job.status === 'completed') {
-      const requestedLevels = levelFilter
-        .split(',')
-        .map((level) => level.trim().toUpperCase());
-
-      const filteredLevels = {};
-
-      // Keep only the requested log levels in the response
-      Object.entries(job.result.levels).forEach(([level, count]) => {
-        if (requestedLevels.includes(level)) {
-          filteredLevels[level] = count;
-        }
-      });
-
-      job.result.levels = filteredLevels;
+    if (job.status === 'completed') {
+      job.result.levels = filterLevels(job.result.levels, levelFilter);
     }
-    res.json({ success: true, job });
+    return res.json({ success: true, job });
   } else
     return next(new ErrorResponse(`Job with id: ${id} does not exist.`, 404));
 });
