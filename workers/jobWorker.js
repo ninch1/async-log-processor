@@ -1,4 +1,4 @@
-const { updateJob } = require('../database/jobStore');
+const { updateJob, expireJob } = require('../database/jobStore');
 const { Worker } = require('bullmq');
 const fs = require('fs');
 const split2 = require('split2');
@@ -75,6 +75,8 @@ new Worker(
         result,
         completedAt: Date.now(),
       });
+
+      await expireJob(id, 30); // delete completed job after 1 hour
     } catch (err) {
       // Save failure details if processing fails
       await updateJob(id, {

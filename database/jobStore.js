@@ -23,9 +23,14 @@ async function deleteJob(id) {
   await redis.del(`job:${id}`);
 }
 
+async function expireJob(id, seconds) {
+  await redis.expire(`job:${id}`, seconds);
+}
+
 module.exports = {
   saveJob,
   getJob,
   updateJob,
   deleteJob,
+  expireJob,
 };
