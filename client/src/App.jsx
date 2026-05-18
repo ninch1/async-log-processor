@@ -1,122 +1,126 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { mockJobDone, mockProcessingJob, mockFailedJob } from './data/mockData';
+import UploadCard from './components/UploadCard';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const currentJob = mockJobDone;
+
+  let statusColor;
+
+  if (currentJob.status.toLowerCase() === 'completed') {
+    statusColor = 'text-green-400';
+  } else if (currentJob.status.toLowerCase() === 'processing') {
+    statusColor = 'text-yellow-400';
+  } else {
+    statusColor = 'text-red-400';
+  }
+
+  const formattedStatus =
+    currentJob.status[0].toUpperCase() + currentJob.status.slice(1);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+    <main className='min-h-screen bg-slate-950 text-slate-100'>
+      <div className='mx-auto max-w-5xl px-6 py-10'>
+        <header className='mb-10'>
+          <h1 className='text-4xl font-bold'>Async Log Processor</h1>
+          <p className='mt-2 text-slate-400'>
+            Upload log files, process them in the background, and view results.
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+        </header>
 
-      <div className="ticks"></div>
+        <section className='grid gap-6 md:grid-cols-2'>
+          <UploadCard />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <div className='rounded-xl border border-slate-800 bg-slate-900 p-6'>
+            <h2 className='text-xl font-semibold'>Job Status</h2>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+            <p className={`mt-2 font-semibold ${statusColor}`}>
+              {formattedStatus}
+            </p>
+
+            <div className='mt-4'>
+              <p className='text-sm text-slate-400'>Job ID</p>
+              <p className='mt-1 break-all rounded-lg bg-slate-950 px-3 py-2 font-mono text-sm text-slate-300'>
+                {currentJob.id}
+              </p>
+            </div>
+
+            <div className='mt-4'>
+              <p className='text-sm text-slate-400'>Progress</p>
+              <div className='mt-2 h-2 rounded-full bg-slate-800'>
+                <div
+                  className='h-2 rounded-full bg-blue-500'
+                  style={{ width: `${currentJob.progress}%` }}
+                />
+              </div>
+              <p className='mt-1 text-sm text-slate-400'>
+                {currentJob.progress}%
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className='mt-6 rounded-xl border border-slate-800 bg-slate-900 p-6'>
+          <div className='mb-6 flex items-center justify-between'>
+            <div>
+              <h2 className='text-xl font-semibold'>Results</h2>
+              <p className='mt-1 text-sm text-slate-400'>
+                Summary of processed log levels.
+              </p>
+            </div>
+
+            <span className='rounded-full bg-slate-800 px-3 py-1 text-sm text-slate-300'>
+              {currentJob.status === 'completed' ? 'Ready' : 'Waiting'}
+            </span>
+          </div>
+
+          {currentJob.status === 'completed' ? (
+            <div>
+              <div className='mb-6 rounded-lg bg-slate-950 p-4'>
+                <p className='text-sm text-slate-400'>Total Lines</p>
+                <p className='mt-1 text-3xl font-bold'>
+                  {currentJob.result.totalLines}
+                </p>
+              </div>
+
+              <div className='grid gap-4 sm:grid-cols-3'>
+                <div className='rounded-lg border border-slate-800 bg-slate-950 p-4'>
+                  <p className='text-sm text-slate-400'>INFO</p>
+                  <p className='mt-2 text-2xl font-semibold text-blue-400'>
+                    {currentJob.result.levels.INFO || 0}
+                  </p>
+                </div>
+
+                <div className='rounded-lg border border-slate-800 bg-slate-950 p-4'>
+                  <p className='text-sm text-slate-400'>WARN</p>
+                  <p className='mt-2 text-2xl font-semibold text-yellow-400'>
+                    {currentJob.result.levels.WARN || 0}
+                  </p>
+                </div>
+
+                <div className='rounded-lg border border-slate-800 bg-slate-950 p-4'>
+                  <p className='text-sm text-slate-400'>ERROR</p>
+                  <p className='mt-2 text-2xl font-semibold text-red-400'>
+                    {currentJob.result.levels.ERROR || 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className='rounded-lg border border-dashed border-slate-700 bg-slate-950 p-6 text-center'>
+              <p className='text-slate-400'>
+                Results will appear after the job is completed.
+              </p>
+            </div>
+          )}
+        </section>
+
+        <section className='mt-6 rounded-xl border border-slate-800 bg-slate-900 p-6'>
+          <h2 className='text-xl font-semibold'>Search Job by ID</h2>
+        </section>
+      </div>
+    </main>
+  );
 }
 
-export default App
+export default App;
