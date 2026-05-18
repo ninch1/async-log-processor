@@ -3,6 +3,7 @@ const { Worker } = require('bullmq');
 const fs = require('fs');
 const split2 = require('split2');
 const through2 = require('through2');
+const zlib = require('zlib');
 
 // Creates a transform function that counts each line processed by the stream
 function logCounterWrapper(result) {
@@ -41,13 +42,17 @@ new Worker(
       });
 
       // --- only for visualization while testing ---
-      //await delay(10000);
+      await delay(10000);
 
       // Wrap stream processing in a Promise so BullMQ waits until the stream finishes
       await new Promise((resolve, reject) => {
         const readStream = fs.createReadStream(filePath);
 
-        const mainStream = readStream
+        let inputStream = readStream;
+        if (filePath.endsWith('.gz'))
+          inputStream = readStream.pipe(zlib.createGunzip());
+
+        const mainStream = inputStream
           .pipe(split2())
           .pipe(through2(logCounterWrapper(result)));
 

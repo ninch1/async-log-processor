@@ -154,7 +154,7 @@ router.get('/:id/result', async (req, res, next) => {
       );
 
     job.result.levels = filterLevels(job.result.levels, levelFilter);
-    return res.json({ success: true, job });
+    return res.json({ success: true, result: job.result });
   } else
     return next(new ErrorResponse(`Job with id: ${id} does not exist.`, 404));
 });
