@@ -20,18 +20,22 @@ A Node.js backend that processes uploaded log files asynchronously using BullMQ,
 - Upload validation:
   - accepts `.txt`, `.log`, `.txt.gz`, `.log.gz`
   - rejects unsupported file types
-  - enforces a file size limit
+  - enforces a 10 MB file size limit
 - Job lifecycle tracking:
   - queued
   - processing
   - completed
   - failed
+- Job progress tracking during file processing
+- BullMQ retry handling for failed jobs
+- Redis TTL cleanup for completed job records
 - Result endpoint:
   - `GET /jobs/:id/result`
 - Optional result filtering:
   - `?level=ERROR`
   - `?level=ERROR,WARN`
 - Deletes uploaded files after successful processing
+- Keeps failed upload files for debugging
 
 ## Tech Stack
 
@@ -44,6 +48,7 @@ A Node.js backend that processes uploaded log files asynchronously using BullMQ,
 - split2
 - through2
 - zlib
+- Docker
 
 ## Running Locally
 
@@ -84,13 +89,33 @@ Supported file types:
 .log.gz
 ```
 
+The API returns a job record immediately after the file is saved and queued.
+
+Example response:
+
+```json
+{
+  "success": true,
+  "job": {
+    "id": "example-job-id",
+    "status": "queued",
+    "progress": 0,
+    "result": {},
+    "createdAt": 1710000000000,
+    "startedAt": null,
+    "completedAt": null,
+    "filePath": "uploads/example-job-id.log"
+  }
+}
+```
+
 ### Get job metadata
 
 ```http
 GET /jobs/:id
 ```
 
-Returns the full job record, including status, timestamps, file path, and result if processing is complete.
+Returns the full job record, including status, timestamps, progress, file path, and result if processing has completed.
 
 Optional filtering:
 
@@ -135,7 +160,7 @@ If the job is not completed yet, the API returns a `409 Conflict`.
 ```txt
 Client uploads file
         ↓
-Express API saves file to uploads/
+Express API validates and saves file to uploads/
         ↓
 API creates Redis job record
         ↓
@@ -143,17 +168,32 @@ API adds BullMQ job
         ↓
 Worker receives job
         ↓
+Worker updates job status/progress in Redis
+        ↓
 Worker streams and analyzes file
         ↓
 Worker updates Redis job result
         ↓
-Uploaded file is deleted after success
+Uploaded file is deleted after successful processing
+        ↓
+Completed job record expires from Redis after TTL
 ```
 
-## TODO
+## Job Lifecycle
 
-- Add Redis job cleanup / TTL
-- Add retry handling for failed jobs
-- Add progress tracking
-- Add more detailed log summaries
-- Add tests
+```txt
+queued → processing → completed
+                  ↘ failed
+```
+
+- `queued`: file has been saved and job has been added to the queue
+- `processing`: worker has started processing the file
+- `completed`: worker finished processing and result is available
+- `failed`: worker failed after processing/retry attempts
+
+## Notes
+
+- Completed uploaded files are deleted after successful processing.
+- Failed upload files are kept for debugging.
+- Completed Redis job records expire automatically after a TTL.
+- Redis must be running for the API, worker, and queue to work.
