@@ -110,7 +110,17 @@ router.post('/', async (req, res, next) => {
       // adds job to redis and queue
       try {
         await saveJob(job);
-        await jobQueue.add('process-log', { id, filePath });
+        await jobQueue.add(
+          'process-log',
+          { id, filePath },
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000,
+            },
+          },
+        );
       } catch (error) {
         await deleteJob(id);
         if (!settled) {

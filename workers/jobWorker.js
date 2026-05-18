@@ -56,6 +56,8 @@ new Worker(
           .pipe(split2())
           .pipe(through2(logCounterWrapper(result)));
 
+        inputStream.on('error', reject); // checks for zlib errors
+
         // When stream processing finishes, delete the uploaded file and resolve the Promise
         mainStream.on('finish', () => {
           fs.unlink(filePath, (err) => {
@@ -76,7 +78,7 @@ new Worker(
         completedAt: Date.now(),
       });
 
-      await expireJob(id, 30); // delete completed job after 1 hour
+      await expireJob(id, 60 * 60); // delete completed job after 1 hour
     } catch (err) {
       // Save failure details if processing fails
       await updateJob(id, {
@@ -84,6 +86,8 @@ new Worker(
         failedAt: Date.now(),
         errorMessage: err.message,
       });
+
+      throw err;
     }
   },
   {
