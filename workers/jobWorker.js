@@ -42,7 +42,7 @@ new Worker(
       });
 
       // --- only for visualization while testing ---
-      await delay(10000);
+      //await delay(10000);
 
       // Wrap stream processing in a Promise so BullMQ waits until the stream finishes
       await new Promise((resolve, reject) => {

@@ -38,7 +38,13 @@ router.post('/', async (req, res, next) => {
 
   let bb;
   try {
-    bb = busboy({ headers: req.headers }); // initialize busboy
+    bb = busboy({
+      headers: req.headers,
+      limits: {
+        files: 1,
+        fileSize: 10 * 1024 * 1024, // 10 MB
+      },
+    }); // initialize busboy
   } catch (err) {
     return next(new ErrorResponse(err.message, 400));
   }
@@ -58,6 +64,7 @@ router.post('/', async (req, res, next) => {
   };
 
   bb.on('file', (name, file, info) => {
+    // Reject requests that include more than one uploaded file
     if (hasFile && !settled) {
       settled = true;
       return next(
@@ -67,13 +74,62 @@ router.post('/', async (req, res, next) => {
 
     hasFile = true;
 
+    // Ensure the uploads folder exists before writing the file
     const uploadsDir = path.join(__dirname, '..', 'uploads');
+
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Extract the file extension from the original filename
     const filename = info.filename.split('.');
-    const fileType = filename[filename.length - 1];
-    const filePath = path.join(uploadsDir, `${id}.${fileType}`);
+    let fileType = filename[filename.length - 1];
+
+    // Support compressed log files like .txt.gz or .log.gz
+    let isGzip = false;
+    if (fileType === 'gz') {
+      isGzip = true;
+      fileType = filename[filename.length - 2];
+    }
+
+    // Save the uploaded file using the generated job id
+    const filePath = path.join(
+      uploadsDir,
+      `${id}.${fileType}${isGzip ? '.gz' : ''}`,
+    );
+
+    // Only allow plain or gzip-compressed text/log files
+    const acceptedFileType = ['txt', 'log'];
+
+    if (!acceptedFileType.includes(fileType)) {
+      settled = true;
+      file.resume(); // discard unsupported upload stream so the request can finish cleanly
+      return next(
+        new ErrorResponse('Uploaded file type is not supported', 400),
+      );
+    }
+
+    // Store the saved file path on the job record so the worker can read it later
     job.filePath = filePath;
 
     const writeStream = fs.createWriteStream(filePath);
+
+    file.on('limit', () => {
+      if (settled) return;
+      settled = true;
+
+      writeStream.destroy();
+
+      fs.unlink(filePath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.log('Partial file cleanup error:', err);
+        }
+      });
+
+      file.resume();
+
+      return next(new ErrorResponse('Uploaded file is too large', 400));
+    });
 
     writeStream.on('error', (err) => {
       if (!settled) {
