@@ -39,6 +39,7 @@ new Worker(
       await updateJob(id, {
         status: 'processing',
         startedAt: Date.now(),
+        progress: 0,
       });
 
       // --- only for visualization while testing ---
@@ -46,13 +47,44 @@ new Worker(
 
       // Wrap stream processing in a Promise so BullMQ waits until the stream finishes
       await new Promise((resolve, reject) => {
+        // get file size for progress report
+        const stats = fs.statSync(filePath);
+        const totalBytes = stats.size;
+        let bytesRead = 0;
+        let nextProgressUpdate = 25;
+
+        const progressStream = through2(async function (chunk, enc, callback) {
+          try {
+            bytesRead += chunk.length;
+            const progress = Math.min(
+              100,
+              Math.round((bytesRead / totalBytes) * 100),
+            );
+
+            if (progress >= nextProgressUpdate) {
+              await updateJob(id, { progress: nextProgressUpdate });
+              nextProgressUpdate += 25;
+              console.log('progress:', progress);
+            }
+
+            callback(null, chunk); // pass chunk forward
+          } catch (err) {
+            callback(err);
+          }
+        });
+
+        /* use to slow down process , {
+          highWaterMark: 64,
+        }*/
         const readStream = fs.createReadStream(filePath);
 
         let inputStream = readStream;
         if (filePath.endsWith('.gz'))
           inputStream = readStream.pipe(zlib.createGunzip());
 
+        // piping streams
         const mainStream = inputStream
+          .pipe(progressStream)
           .pipe(split2())
           .pipe(through2(logCounterWrapper(result)));
 
@@ -76,6 +108,7 @@ new Worker(
         status: 'completed',
         result,
         completedAt: Date.now(),
+        progress: 100,
       });
 
       await expireJob(id, 60 * 60); // delete completed job after 1 hour

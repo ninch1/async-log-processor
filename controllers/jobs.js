@@ -43,6 +43,7 @@ router.post('/', async (req, res, next) => {
     createdAt: Date.now(),
     startedAt: null,
     completedAt: null,
+    progress: 0,
   };
 
   bb.on('file', (name, file, info) => {
