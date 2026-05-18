@@ -6,26 +6,8 @@ const jobQueue = require('../queues/jobQueue');
 const busboy = require('busboy');
 const fs = require('fs');
 const path = require('path');
-
-// helper function for filtering levels
-function filterLevels(levels, levelFilter) {
-  if (!levelFilter || !levels) return levels;
-
-  const requestedLevels = levelFilter
-    .split(',')
-    .map((level) => level.trim().toUpperCase());
-
-  const filteredLevels = {};
-
-  // Keep only the requested log levels in the response
-  Object.entries(levels).forEach(([level, count]) => {
-    if (requestedLevels.includes(level)) {
-      filteredLevels[level] = count;
-    }
-  });
-
-  return filteredLevels;
-}
+const filterLevels = require('../utils/filterLevels');
+const getUploadFileInfo = require('../utils/getUploadFileInfo');
 
 // initializing express router
 const router = express.Router();
@@ -81,33 +63,19 @@ router.post('/', async (req, res, next) => {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    // Extract the file extension from the original filename
-    const filename = info.filename.split('.');
-    let fileType = filename[filename.length - 1];
+    // Parse and validate original filename to determine saved extension
+    const fileInfo = getUploadFileInfo(info.filename);
 
-    // Support compressed log files like .txt.gz or .log.gz
-    let isGzip = false;
-    if (fileType === 'gz') {
-      isGzip = true;
-      fileType = filename[filename.length - 2];
-    }
-
-    // Save the uploaded file using the generated job id
-    const filePath = path.join(
-      uploadsDir,
-      `${id}.${fileType}${isGzip ? '.gz' : ''}`,
-    );
-
-    // Only allow plain or gzip-compressed text/log files
-    const acceptedFileType = ['txt', 'log'];
-
-    if (!acceptedFileType.includes(fileType)) {
+    if (!fileInfo.isValid) {
       settled = true;
       file.resume(); // discard unsupported upload stream so the request can finish cleanly
+
       return next(
         new ErrorResponse('Uploaded file type is not supported', 400),
       );
     }
+
+    const filePath = path.join(uploadsDir, `${id}.${fileInfo.savedExtension}`);
 
     // Store the saved file path on the job record so the worker can read it later
     job.filePath = filePath;
