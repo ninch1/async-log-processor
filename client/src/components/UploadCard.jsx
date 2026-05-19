@@ -1,26 +1,39 @@
 import { useEffect, useState } from 'react';
 import { getJob, uploadJob } from '../api/jobsApi';
 
-function UploadCard({
-  selectedFile,
-  setSelectedFile,
-  currentJob,
-  setCurrentJob,
-}) {
+function UploadCard({ currentJob, setCurrentJob }) {
+  const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState(null);
 
+  // Poll the backend while the current job is still active
   useEffect(() => {
     if (!currentJob) return;
-    if (currentJob.status === 'completed' || currentJob.status === 'failed')
+    if (currentJob.status === 'completed' || currentJob.status === 'failed') {
       return;
+    }
+
+    const jobId = currentJob.id;
 
     const interval = setInterval(async () => {
-      const data = await getJob(currentJob.id);
-      setCurrentJob(data.job);
+      try {
+        const data = await getJob(jobId);
+
+        // Prevent old polling requests from replacing a newer uploaded/searched job
+        setCurrentJob((prevJob) => {
+          if (!prevJob || prevJob.id !== jobId) {
+            return prevJob;
+          }
+
+          return data.job;
+        });
+      } catch (err) {
+        clearInterval(interval);
+      }
     }, 2000);
 
+    // Stop polling when the job changes or the component unmounts
     return () => clearInterval(interval);
-  }, [currentJob]);
+  }, [currentJob, setCurrentJob]);
 
   async function handleFileChange(e) {
     setSelectedFile(e.target.files[0]); // take first one since we are using only 1 file
@@ -32,6 +45,7 @@ function UploadCard({
     try {
       setUploadError(null);
 
+      // Upload selected file and store the created job returned by the backend
       const data = await uploadJob(selectedFile);
 
       setCurrentJob(data.job);
@@ -50,7 +64,7 @@ function UploadCard({
 
       <input
         type='file'
-        accept='.txt,.log,.gz'
+        accept='.txt,.log,.txt.gz,.log.gz'
         onChange={handleFileChange}
         className='mt-5 block w-full cursor-pointer rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-300 file:mr-4 file:border-0 file:bg-slate-800 file:px-4 file:py-2 file:text-slate-100 hover:file:bg-slate-700'
       />

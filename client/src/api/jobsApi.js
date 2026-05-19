@@ -20,11 +20,20 @@ export async function uploadJob(file) {
 
 export async function getJob(id) {
   const res = await fetch(`${API_BASE_URL}/jobs/${id}`);
-  return res.json();
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch job');
+  }
+
+  return data;
 }
 
+/* filter api helper, not needed on front i guess
 export async function getJobResult(id, levelFilter) {
   const query = levelFilter ? `?level=${levelFilter}` : '';
   const res = await fetch(`${API_BASE_URL}/jobs/${id}/result${query}`);
   return res.json();
 }
+*/
