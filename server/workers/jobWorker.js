@@ -64,7 +64,6 @@ new Worker(
             if (progress >= nextProgressUpdate) {
               await updateJob(id, { progress: nextProgressUpdate });
               nextProgressUpdate += 25;
-              console.log('progress:', progress);
             }
 
             callback(null, chunk); // pass chunk forward

@@ -2,10 +2,13 @@ const express = require('express');
 const jobsRoute = require('./controllers/jobs');
 const errorMiddleware = require('./middleware/errorMiddleware');
 const ErrorResponse = require('./utils/ErrorResponse');
+const cors = require('cors');
 
 const PORT = 3000;
 
 const app = express();
+
+app.use(cors()); // --- ONLY FOR DEVELOPMENT ---
 
 app.use('/jobs', jobsRoute);
 

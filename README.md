@@ -37,6 +37,10 @@ A Node.js backend that processes uploaded log files asynchronously using BullMQ,
 - Deletes uploaded files after successful processing
 - Keeps failed upload files for debugging
 
+- React frontend dashboard
+- Upload files from the browser
+- Displays upload validation errors from the backend
+
 ## Tech Stack
 
 - Node.js
@@ -69,6 +73,16 @@ npm install
 ```bash
 npm run dev
 ```
+
+### 5. Start frontend
+
+```bash
+npm run dev
+```
+
+The frontend runs on `http://localhost:5173`.
+
+The backend runs on `http://localhost:3000`.
 
 ## API Endpoints
 

@@ -1,14 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getJob, uploadJob } from '../api/jobsApi';
 
-function UploadCard() {
-  const [selectedFile, setSelectedFile] = useState(null);
+function UploadCard({
+  selectedFile,
+  setSelectedFile,
+  currentJob,
+  setCurrentJob,
+}) {
+  const [uploadError, setUploadError] = useState(null);
 
-  function handleFileChange(e) {
+  useEffect(() => {
+    if (!currentJob) return;
+    if (currentJob.status === 'completed' || currentJob.status === 'failed')
+      return;
+
+    const interval = setInterval(async () => {
+      const data = await getJob(currentJob.id);
+      setCurrentJob(data.job);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [currentJob]);
+
+  async function handleFileChange(e) {
     setSelectedFile(e.target.files[0]); // take first one since we are using only 1 file
   }
 
-  function handleUpload() {
-    console.log(selectedFile);
+  async function handleUpload() {
+    if (!selectedFile) return;
+
+    try {
+      setUploadError(null);
+
+      const data = await uploadJob(selectedFile);
+
+      setCurrentJob(data.job);
+    } catch (err) {
+      setUploadError(err.message);
+    }
   }
 
   return (
@@ -39,6 +68,12 @@ function UploadCard() {
       >
         Upload
       </button>
+
+      {uploadError && (
+        <p className='mt-3 rounded-lg bg-red-950 px-3 py-2 text-sm text-red-300'>
+          {uploadError}
+        </p>
+      )}
     </div>
   );
 }
